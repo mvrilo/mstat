@@ -18,6 +18,10 @@ func New() *Machine {
 	return new(Machine)
 }
 
+type Uptime struct {
+	Time float64 `json:"time"`
+}
+
 type Swap struct {
 	Total uint64 `json:"total"`
 	Free  uint64 `json:"free"`
@@ -40,9 +44,19 @@ type FileSystem struct {
 	Percent   float64 `json:"percent"`
 }
 
+func (m *Machine) Uptime() Uptime {
+	uptime := sigar.Uptime{}
+	if err := uptime.Get(); err != nil {
+		panic(err)
+	}
+	return Uptime{uptime.Length}
+}
+
 func (m *Machine) Swap() Swap {
 	swap := sigar.Swap{}
-	swap.Get()
+	if err := swap.Get(); err != nil {
+		panic(err)
+	}
 	return Swap{
 		m.format(swap.Total),
 		m.format(swap.Free),
@@ -52,7 +66,9 @@ func (m *Machine) Swap() Swap {
 
 func (m *Machine) Memory() Memory {
 	mem := sigar.Mem{}
-	mem.Get()
+	if err := mem.Get(); err != nil {
+		panic(err)
+	}
 	return Memory{
 		m.format(mem.Total),
 		m.format(mem.Free),
@@ -62,14 +78,16 @@ func (m *Machine) Memory() Memory {
 
 func (m *Machine) FileSystem(path string) FileSystem {
 	fs := sigar.FileSystemUsage{}
-	fs.Get(path)
+	if err := fs.Get(path); err != nil {
+		panic(err)
+	}
 	return FileSystem{
 		m.format(fs.Total),
 		m.format(fs.Free),
 		m.format(fs.Used),
 		m.format(fs.Avail),
-		m.format(fs.Files),
-		m.format(fs.FreeFiles),
+		fs.Files,
+		fs.FreeFiles,
 		fs.UsePercent(),
 	}
 }
@@ -121,6 +139,9 @@ func (m *Machine) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/swap/", "/swap":
 			m.writeJSON(w, m.Swap())
+			return
+		case "/uptime/", "/uptime":
+			m.writeJSON(w, m.Uptime())
 			return
 		case "/memory/", "/memory", "/mem/", "/mem":
 			m.writeJSON(w, m.Memory())
