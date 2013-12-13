@@ -1,3 +1,3 @@
 # mstat
 
-Simple and pluggable JSON endpoints for machine stats - memory, swap, filesystem.
+Machine stats (memory, swap, filesystem) with JSON endpoints.
